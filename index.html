@@ -1,0 +1,1054 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Even Money: The Investing Game</title>
+<style>
+  :root {
+    --bg: #0f1722;
+    --panel: #1a2533;
+    --panel-light: #24344a;
+    --text: #e8edf2;
+    --muted: #8fa3b8;
+    --green: #2ecc71;
+    --red: #e74c3c;
+    --purple: #9b59b6;
+    --gray: #7f8c9b;
+    --gold: #f1c40f;
+    --border: #324860;
+  }
+
+  * { box-sizing: border-box; }
+
+  html, body {
+    height: 100%;
+    margin: 0;
+    overflow: hidden;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+  }
+
+  #app {
+    height: 100vh;
+    width: 100vw;
+    display: flex;
+    flex-direction: column;
+    padding: 10px 16px;
+    gap: 10px;
+  }
+
+  /* Header */
+  header {
+    display: flex;
+    gap: 12px;
+    align-items: stretch;
+  }
+
+  .stat {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 8px 16px;
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    min-width: 0;
+  }
+
+  .stat-label {
+    font-size: 0.7rem;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--muted);
+  }
+
+  .stat-value {
+    font-size: clamp(0.7rem, 3.8vw, 1.6rem);
+    font-weight: 700;
+    line-height: 1.2;
+    white-space: nowrap;
+    overflow: hidden;
+  }
+
+  #cash-stat .stat-value { color: var(--gold); }
+
+  .progress-track {
+    margin-top: 4px;
+    height: 8px;
+    border-radius: 4px;
+    background: var(--panel-light);
+    overflow: hidden;
+  }
+
+  .progress-fill {
+    height: 100%;
+    background: linear-gradient(90deg, var(--green), var(--gold));
+    width: 0%;
+    transition: width 0.25s ease;
+  }
+
+  h1 {
+    margin: 0;
+    font-size: 1.3rem;
+    white-space: nowrap;
+  }
+
+  .description {
+    margin: 0;
+    font-size: 0.8rem;
+    line-height: 1.4;
+    color: var(--muted);
+    flex-shrink: 0;
+  }
+
+  /* Main layout */
+  main {
+    flex: 1;
+    display: flex;
+    gap: 12px;
+    min-height: 0;
+  }
+
+  .panel {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 14px;
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+  }
+
+  .controls-panel {
+    flex: 0 0 46%;
+    gap: 12px;
+  }
+
+  .chart-panel {
+    flex: 1;
+    min-width: 0;
+  }
+
+  .chart-panel h2, .controls-panel h2 {
+    margin: 0 0 6px 0;
+    font-size: 0.95rem;
+    color: var(--muted);
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+  }
+
+  #chart-wrap {
+    flex: 1;
+    min-height: 0;
+    position: relative;
+  }
+
+  canvas {
+    display: block;
+    width: 100%;
+    height: 100%;
+  }
+
+  /* Action buttons */
+  .action-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+  }
+
+  .action-btn {
+    position: relative;
+    border: none;
+    border-radius: 10px;
+    color: #fff;
+    font-size: 1rem;
+    font-weight: 700;
+    padding: 12px 6px;
+    cursor: pointer;
+    transition: transform 0.08s ease, filter 0.15s ease;
+    text-align: center;
+  }
+
+  .key-hint {
+    position: absolute;
+    top: 6px;
+    left: 8px;
+    width: 18px;
+    height: 18px;
+    border-radius: 5px;
+    background: rgba(0, 0, 0, 0.25);
+    font-size: 0.7rem;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .action-btn:hover:not(:disabled) { filter: brightness(1.12); }
+  .action-btn:active:not(:disabled) { transform: scale(0.97); }
+  .action-btn:disabled { opacity: 0.45; cursor: not-allowed; }
+
+  .action-btn small {
+    display: block;
+    font-weight: 400;
+    font-size: 0.7rem;
+    opacity: 0.85;
+    margin-top: 2px;
+  }
+
+  #btn-long { background: var(--green); }
+  #btn-short { background: var(--red); }
+  #btn-lever { background: var(--purple); }
+  #btn-hold { background: var(--gray); }
+
+  /* Repeat control */
+  .repeat-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 0.85rem;
+    color: var(--muted);
+    margin-top: 12px;
+  }
+
+  .repeat-row input {
+    width: 70px;
+    background: var(--panel-light);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    color: var(--text);
+    padding: 6px 8px;
+    font-size: 0.95rem;
+  }
+
+  /* Card area */
+  .card-area {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 24px;
+    min-height: 0;
+  }
+
+  .playing-card {
+    width: 92px;
+    height: 128px;
+    border-radius: 10px;
+    background: #fff;
+    color: #1a1a1a;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    font-weight: 800;
+    font-size: 2.6rem;
+    border: 4px solid var(--border);
+    transition: border-color 0.2s ease;
+    flex-shrink: 0;
+  }
+
+  .playing-card.even { border-color: var(--green); color: var(--green); }
+  .playing-card.odd { border-color: var(--red); color: var(--red); }
+
+  .playing-card .parity-label {
+    font-size: 0.7rem;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    margin-top: 2px;
+  }
+
+  .result-text {
+    font-size: 1.1rem;
+    line-height: 1.5;
+    min-width: 0;
+  }
+
+  .result-text .action-name {
+    font-weight: 700;
+  }
+
+  .result-text .delta-up { color: var(--green); font-weight: 700; }
+  .result-text .delta-down { color: var(--red); font-weight: 700; }
+  .result-text .delta-flat { color: var(--gray); font-weight: 700; }
+
+  /* Overlay */
+  .overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(5, 10, 18, 0.85);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 10;
+  }
+
+  .overlay.hidden { display: none; }
+
+  .overlay-content {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 36px 48px;
+    text-align: center;
+    max-width: 480px;
+  }
+
+  .overlay-content h2 {
+    margin: 0 0 12px 0;
+    font-size: 2.2rem;
+  }
+
+  .overlay-content p {
+    color: var(--muted);
+    font-size: 1.1rem;
+    margin: 8px 0;
+  }
+
+  .overlay-content .overlay-icon {
+    font-size: 3rem;
+    margin-bottom: 8px;
+  }
+
+  .overlay-counts {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 6px 18px;
+    margin: 16px 0 0;
+    padding: 12px 16px;
+    background: var(--panel-light);
+    border-radius: 10px;
+    text-align: left;
+    font-size: 0.95rem;
+  }
+
+  .overlay-counts .count-row {
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+  }
+
+  .overlay-counts .count-row span:last-child {
+    font-weight: 700;
+    color: var(--gold);
+  }
+
+  #restart-btn {
+    margin-top: 20px;
+    border: none;
+    background: var(--gold);
+    color: #1a1a1a;
+    font-weight: 700;
+    font-size: 1.05rem;
+    padding: 12px 28px;
+    border-radius: 8px;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  #restart-btn:hover { filter: brightness(1.08); }
+
+  .enter-hint {
+    font-size: 0.75rem;
+    font-weight: 700;
+    background: rgba(0, 0, 0, 0.2);
+    border-radius: 5px;
+    padding: 2px 6px;
+  }
+
+  /* Mobile layout */
+  @media (max-width: 640px) {
+    html, body {
+      height: 100%;
+      overflow: hidden;
+    }
+
+    #app {
+      height: 100vh;
+    }
+
+    header {
+      gap: 8px;
+    }
+
+    h1 {
+      font-size: 1.15rem;
+    }
+
+    .stat {
+      padding: 6px 6px;
+    }
+
+    .stat-label { font-size: 0.6rem; }
+
+    .description {
+      font-size: 0.75rem;
+    }
+
+    main {
+      flex-direction: column;
+    }
+
+    .controls-panel {
+      flex: 0 0 auto;
+      min-height: 0;
+    }
+
+    .chart-panel {
+      flex: 1 1 auto;
+      min-height: 80px;
+    }
+
+    .action-grid {
+      gap: 6px;
+    }
+
+    .action-btn {
+      font-size: 0.9rem;
+      padding: 10px 6px;
+    }
+
+    .action-btn small {
+      font-size: 0.65rem;
+    }
+
+    .card-area {
+      flex-direction: column;
+      gap: 10px;
+      text-align: center;
+      padding-top: 8px;
+    }
+
+    .playing-card {
+      width: 76px;
+      height: 106px;
+      font-size: 2.2rem;
+    }
+
+    .result-text {
+      font-size: 0.95rem;
+    }
+
+    .overlay-content {
+      padding: 24px 20px;
+      max-width: 92vw;
+    }
+
+    .overlay-content h2 {
+      font-size: 1.6rem;
+    }
+
+    .overlay-counts {
+      font-size: 0.85rem;
+    }
+  }
+
+  /* Compact layout for short viewports (e.g. iPhone SE / 8) */
+  @media (max-width: 640px) and (max-height: 750px) {
+    html, body {
+      height: 100%;
+      overflow: hidden;
+    }
+
+    #app {
+      height: 100vh;
+      gap: 6px;
+      padding: 8px 10px;
+    }
+
+    h1 {
+      font-size: 1rem;
+    }
+
+    .description {
+      font-size: 0.65rem;
+      line-height: 1.25;
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+    }
+
+    header {
+      gap: 6px;
+    }
+
+    .stat {
+      padding: 4px 6px;
+    }
+
+    .stat-label {
+      font-size: 0.55rem;
+    }
+
+    .stat-value {
+      font-size: clamp(0.55rem, 3vw, 1.3rem);
+    }
+
+    .progress-track {
+      margin-top: 2px;
+      height: 5px;
+    }
+
+    main {
+      gap: 6px;
+    }
+
+    .panel {
+      padding: 8px;
+    }
+
+    .controls-panel {
+      flex: 0 1 auto;
+      gap: 6px;
+      min-height: 0;
+    }
+
+    .chart-panel {
+      flex: 1 1 auto;
+      height: auto;
+      min-height: 50px;
+    }
+
+    .chart-panel h2, .controls-panel h2 {
+      display: none;
+    }
+
+    .action-grid {
+      gap: 4px;
+    }
+
+    .action-btn {
+      font-size: 0.75rem;
+      padding: 6px 4px;
+    }
+
+    .action-btn small {
+      font-size: 0.6rem;
+      margin-top: 1px;
+    }
+
+    .key-hint {
+      width: 14px;
+      height: 14px;
+      font-size: 0.6rem;
+      top: 3px;
+      left: 4px;
+    }
+
+    .repeat-row {
+      margin-top: 6px;
+      font-size: 0.7rem;
+      gap: 6px;
+    }
+
+    .repeat-row input {
+      width: 56px;
+      padding: 3px 5px;
+      font-size: 0.8rem;
+    }
+
+    .card-area {
+      flex: 0 0 auto;
+      flex-direction: row;
+      gap: 12px;
+      padding-top: 6px;
+      text-align: left;
+    }
+
+    .playing-card {
+      width: 52px;
+      height: 72px;
+      font-size: 1.5rem;
+    }
+
+    .playing-card .parity-label {
+      font-size: 0.55rem;
+    }
+
+    .result-text {
+      font-size: 0.75rem;
+      line-height: 1.3;
+    }
+
+    .overlay-content {
+      max-height: 90vh;
+      overflow-y: auto;
+      padding: 18px 16px;
+    }
+
+    .overlay-content h2 {
+      font-size: 1.3rem;
+    }
+
+    .overlay-content .overlay-icon {
+      font-size: 2rem;
+      margin-bottom: 4px;
+    }
+
+    .overlay-content p {
+      font-size: 0.9rem;
+      margin: 4px 0;
+    }
+
+    .overlay-counts {
+      font-size: 0.75rem;
+      padding: 8px 10px;
+      margin: 8px 0 0;
+    }
+
+    #restart-btn {
+      margin-top: 12px;
+      font-size: 0.9rem;
+      padding: 9px 20px;
+    }
+  }
+</style>
+</head>
+<body>
+<div id="app">
+  <h1>&#128200; Even Money</h1>
+
+  <p class="description">Turn $100 into $1,000,000 by making the right calls. Each round, you'll choose a move before a hidden card numbered 2&ndash;10 is revealed. Go Long and Go Short let you wager on whether the card will be even or odd. Guess correctly to earn 2&times; your stake; guess wrong and receive 0.5&times; back. Feeling bold? Lever Up pays 4&times; on a win but forfeits your entire stake on a loss. Hold lets you sit out the round.</p>
+
+  <header>
+    <div class="stat" id="cash-stat">
+      <div class="stat-label">Net Worth</div>
+      <div class="stat-value" id="cash-value">$100</div>
+      <div class="progress-track"><div class="progress-fill" id="progress-fill"></div></div>
+    </div>
+    <div class="stat">
+      <div class="stat-label">Goal</div>
+      <div class="stat-value">$1,000,000</div>
+    </div>
+    <div class="stat">
+      <div class="stat-label">Time Elapsed</div>
+      <div class="stat-value" id="time-value">0 mo</div>
+    </div>
+  </header>
+
+  <main>
+    <section class="panel controls-panel">
+      <div>
+        <h2>Choose Your Move</h2>
+        <div class="action-grid">
+          <button class="action-btn" id="btn-long" data-action="long"><span class="key-hint">1</span>Go Long<small>Even → x2 &nbsp;|&nbsp; Odd → x0.5</small></button>
+          <button class="action-btn" id="btn-short" data-action="short"><span class="key-hint">2</span>Go Short<small>Odd → x2 &nbsp;|&nbsp; Even → x0.5</small></button>
+          <button class="action-btn" id="btn-lever" data-action="lever"><span class="key-hint">3</span>Lever Up<small>Even → x4 &nbsp;|&nbsp; Odd → $0</small></button>
+          <button class="action-btn" id="btn-hold" data-action="hold"><span class="key-hint">4</span>Hold<small>No change</small></button>
+        </div>
+        <div class="repeat-row">
+          <label for="repeat-input">Repeat</label>
+          <input type="number" id="repeat-input" min="1" max="1000" value="1">
+          <span>time(s)</span>
+        </div>
+      </div>
+      <div class="card-area">
+        <div class="playing-card" id="card-display">?</div>
+        <div class="result-text" id="result-text">Pick a move to draw your first card.</div>
+      </div>
+    </section>
+
+    <section class="panel chart-panel">
+      <h2>Net Worth Over Time</h2>
+      <div id="chart-wrap">
+        <canvas id="chart"></canvas>
+      </div>
+    </section>
+  </main>
+</div>
+
+<div class="overlay hidden" id="overlay">
+  <div class="overlay-content">
+    <div class="overlay-icon" id="overlay-icon"></div>
+    <h2 id="overlay-title"></h2>
+    <p id="overlay-message"></p>
+    <p id="overlay-stat"></p>
+    <div class="overlay-counts" id="overlay-counts"></div>
+    <button id="restart-btn">Play Again <span class="enter-hint">&#8629; Enter</span></button>
+  </div>
+</div>
+
+<script>
+(function () {
+  const STARTING_CASH = 100;
+  const GOAL = 1000000;
+  const MONTHS_PER_CARD = 3;
+  const DEAL_DELAY_MS = 350;
+  const BROKE_THRESHOLD = 0.01;
+
+  let deck = [];
+  let cash = STARTING_CASH;
+  let months = 0;
+  let history = [];
+  let gameOver = false;
+  let dealing = false;
+  let actionCounts = { long: 0, short: 0, lever: 0, hold: 0 };
+
+  const cashValueEl = document.getElementById('cash-value');
+  const timeValueEl = document.getElementById('time-value');
+  const progressFillEl = document.getElementById('progress-fill');
+  const cardDisplayEl = document.getElementById('card-display');
+  const resultTextEl = document.getElementById('result-text');
+  const repeatInputEl = document.getElementById('repeat-input');
+  const overlayEl = document.getElementById('overlay');
+  const overlayIconEl = document.getElementById('overlay-icon');
+  const overlayTitleEl = document.getElementById('overlay-title');
+  const overlayMessageEl = document.getElementById('overlay-message');
+  const overlayStatEl = document.getElementById('overlay-stat');
+  const overlayCountsEl = document.getElementById('overlay-counts');
+  const restartBtn = document.getElementById('restart-btn');
+  const canvas = document.getElementById('chart');
+  const ctx = canvas.getContext('2d');
+
+  const actionButtons = Array.from(document.querySelectorAll('.action-btn'));
+
+  const ACTION_INFO = {
+    long: {
+      label: 'Go Long',
+      apply: (c, card) => isEven(card) ? c * 2 : c / 2
+    },
+    short: {
+      label: 'Go Short',
+      apply: (c, card) => isEven(card) ? c / 2 : c * 2
+    },
+    lever: {
+      label: 'Lever Up',
+      apply: (c, card) => isEven(card) ? c * 4 : 0
+    },
+    hold: {
+      label: 'Hold',
+      apply: (c, card) => c
+    }
+  };
+
+  function isEven(card) {
+    return card % 2 === 0;
+  }
+
+  function shuffle(arr) {
+    for (let i = arr.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [arr[i], arr[j]] = [arr[j], arr[i]];
+    }
+  }
+
+  function newDeck() {
+    const x = Math.floor(Math.random() * 5) + 2; // 2-6
+    deck = [];
+    for (let value = 2; value <= 10; value++) {
+      for (let i = 0; i < x; i++) deck.push(value);
+    }
+    shuffle(deck);
+  }
+
+  function drawCard() {
+    if (deck.length === 0) newDeck();
+    return deck.pop();
+  }
+
+  function formatMoney(amount) {
+    if (amount <= 0) return '$0';
+    if (amount < 1) return '$' + amount.toFixed(2);
+    return '$' + Math.round(amount).toLocaleString('en-US');
+  }
+
+  function formatTime(totalMonths) {
+    const years = Math.floor(totalMonths / 12);
+    const remMonths = totalMonths % 12;
+    if (years === 0) return remMonths + ' mo';
+    if (remMonths === 0) return years + ' yr';
+    return years + 'y ' + remMonths + 'mo';
+  }
+
+  function formatAxisLabel(value) {
+    if (value >= 1000000) return '$' + (value / 1000000) + 'M';
+    if (value >= 1000) return '$' + (value / 1000) + 'K';
+    return '$' + value;
+  }
+
+  function formatYears(totalMonths) {
+    const years = Math.floor(totalMonths / 12);
+    const remMonths = totalMonths % 12;
+    let s = years + ' year' + (years === 1 ? '' : 's');
+    if (remMonths > 0) s += ', ' + remMonths + ' month' + (remMonths === 1 ? '' : 's');
+    return s;
+  }
+
+  function updateStats() {
+    cashValueEl.textContent = formatMoney(cash);
+    timeValueEl.textContent = formatTime(months);
+
+    const clamped = Math.max(cash, 1);
+    const pct = Math.min(100, Math.max(0,
+      (Math.log10(clamped) - Math.log10(STARTING_CASH)) /
+      (Math.log10(GOAL) - Math.log10(STARTING_CASH)) * 100
+    ));
+    progressFillEl.style.width = pct + '%';
+  }
+
+  function setButtonsEnabled(enabled) {
+    actionButtons.forEach(b => b.disabled = !enabled);
+    repeatInputEl.disabled = !enabled;
+  }
+
+  function showCard(card) {
+    cardDisplayEl.textContent = card;
+    cardDisplayEl.className = 'playing-card ' + (isEven(card) ? 'even' : 'odd');
+  }
+
+  function showResult(actionKey, card, before, after) {
+    const info = ACTION_INFO[actionKey];
+    const parity = isEven(card) ? 'even' : 'odd';
+    let deltaClass = 'delta-flat';
+    let deltaText = 'unchanged';
+    if (after > before) { deltaClass = 'delta-up'; deltaText = 'increased'; }
+    else if (after < before) { deltaClass = 'delta-down'; deltaText = 'decreased'; }
+
+    resultTextEl.innerHTML =
+      '<span class="action-name">' + info.label + '</span> &mdash; card was <strong>' + card + ' (' + parity + ')</strong>.<br>' +
+      'Net worth <span class="' + deltaClass + '">' + deltaText + '</span> from ' +
+      formatMoney(before) + ' to ' + formatMoney(after) + '.';
+  }
+
+  function checkGameOver() {
+    if (cash < BROKE_THRESHOLD) {
+      cash = 0;
+      endGame('lose');
+      return true;
+    }
+    if (cash >= GOAL) {
+      endGame('win');
+      return true;
+    }
+    return false;
+  }
+
+  function endGame(result) {
+    gameOver = true;
+    setButtonsEnabled(false);
+    overlayEl.classList.remove('hidden');
+
+    if (result === 'win') {
+      overlayIconEl.textContent = '\u{1F389}';
+      overlayTitleEl.textContent = 'You Win!';
+      overlayMessageEl.textContent = 'You turned $100 into $1,000,000 or more!';
+      overlayStatEl.textContent = 'It took ' + formatYears(months) + '.';
+    } else {
+      overlayIconEl.textContent = '\u{1F4C9}';
+      overlayTitleEl.textContent = 'You Went Broke';
+      overlayMessageEl.textContent = 'Your net worth hit zero.';
+      overlayStatEl.textContent = 'You survived ' + formatYears(months) + '.';
+    }
+
+    overlayCountsEl.innerHTML = Object.keys(ACTION_INFO).map(key =>
+      '<div class="count-row"><span>' + ACTION_INFO[key].label + '</span><span>' + actionCounts[key] + '</span></div>'
+    ).join('');
+  }
+
+  function dealOne(actionKey) {
+    const card = drawCard();
+    const before = cash;
+    cash = ACTION_INFO[actionKey].apply(cash, card);
+    months += MONTHS_PER_CARD;
+    actionCounts[actionKey]++;
+    history.push({ months: months, cash: cash });
+
+    showCard(card);
+    showResult(actionKey, card, before, cash);
+    updateStats();
+    drawChart();
+
+    return checkGameOver();
+  }
+
+  function dealSequence(actionKey, count, index) {
+    if (gameOver) return;
+    if (index >= count) {
+      dealing = false;
+      setButtonsEnabled(true);
+      return;
+    }
+
+    const over = dealOne(actionKey);
+    if (over) {
+      dealing = false;
+      return;
+    }
+
+    setTimeout(() => dealSequence(actionKey, count, index + 1), DEAL_DELAY_MS);
+  }
+
+  function onActionClick(actionKey) {
+    if (gameOver || dealing) return;
+
+    let count = parseInt(repeatInputEl.value, 10);
+    if (!Number.isFinite(count) || count < 1) count = 1;
+    if (count > 1000) count = 1000;
+
+    dealing = true;
+    setButtonsEnabled(false);
+    dealSequence(actionKey, count, 0);
+  }
+
+  function resetGame() {
+    deck = [];
+    cash = STARTING_CASH;
+    months = 0;
+    history = [{ months: 0, cash: STARTING_CASH }];
+    gameOver = false;
+    dealing = false;
+    actionCounts = { long: 0, short: 0, lever: 0, hold: 0 };
+
+    cardDisplayEl.textContent = '?';
+    cardDisplayEl.className = 'playing-card';
+    resultTextEl.textContent = 'Pick a move to draw your first card.';
+
+    overlayEl.classList.add('hidden');
+    setButtonsEnabled(true);
+    updateStats();
+    drawChart();
+  }
+
+  // --- Chart rendering ---
+
+  function resizeCanvas() {
+    const wrap = canvas.parentElement;
+    const dpr = window.devicePixelRatio || 1;
+    canvas.width = wrap.clientWidth * dpr;
+    canvas.height = wrap.clientHeight * dpr;
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    drawChart();
+  }
+
+  function drawChart() {
+    const w = canvas.width / (window.devicePixelRatio || 1);
+    const h = canvas.height / (window.devicePixelRatio || 1);
+    ctx.clearRect(0, 0, w, h);
+
+    const padLeft = 44;
+    const padRight = 12;
+    const padTop = 10;
+    const padBottom = 24;
+    const plotW = w - padLeft - padRight;
+    const plotH = h - padTop - padBottom;
+
+    const minY = 1; // $1 floor for log scale
+    const maxMoney = Math.max(GOAL, ...history.map(p => p.cash), STARTING_CASH);
+    const maxY = Math.pow(10, Math.ceil(Math.log10(maxMoney)));
+
+    const maxMonths = Math.max(history[history.length - 1].months, 12);
+
+    function xForMonths(m) {
+      return padLeft + (m / maxMonths) * plotW;
+    }
+    function yForCash(c) {
+      const clamped = Math.max(c, minY);
+      const logVal = Math.log10(clamped);
+      const logMin = Math.log10(minY);
+      const logMax = Math.log10(maxY);
+      const frac = (logVal - logMin) / (logMax - logMin);
+      return padTop + plotH - frac * plotH;
+    }
+
+    // Grid lines + labels (powers of 10)
+    ctx.strokeStyle = '#324860';
+    ctx.fillStyle = '#8fa3b8';
+    ctx.font = '11px -apple-system, sans-serif';
+    ctx.textAlign = 'right';
+    ctx.textBaseline = 'middle';
+
+    const logMin = Math.log10(minY);
+    const logMax = Math.log10(maxY);
+    for (let p = logMin; p <= logMax; p++) {
+      const val = Math.pow(10, p);
+      const y = yForCash(val);
+      ctx.beginPath();
+      ctx.moveTo(padLeft, y);
+      ctx.lineTo(w - padRight, y);
+      ctx.globalAlpha = 0.35;
+      ctx.stroke();
+      ctx.globalAlpha = 1;
+      ctx.fillText(formatAxisLabel(val), padLeft - 6, y);
+    }
+
+    // Goal line
+    if (maxY >= GOAL) {
+      const goalY = yForCash(GOAL);
+      ctx.save();
+      ctx.strokeStyle = '#f1c40f';
+      ctx.setLineDash([4, 4]);
+      ctx.beginPath();
+      ctx.moveTo(padLeft, goalY);
+      ctx.lineTo(w - padRight, goalY);
+      ctx.stroke();
+      ctx.restore();
+    }
+
+    // X axis labels (time)
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'top';
+    const xTicks = 4;
+    for (let i = 0; i <= xTicks; i++) {
+      const m = (maxMonths / xTicks) * i;
+      const x = xForMonths(m);
+      ctx.fillText(formatTime(Math.round(m)), x, h - padBottom + 6);
+    }
+
+    // Net worth line
+    if (history.length > 0) {
+      ctx.strokeStyle = '#2ecc71';
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      history.forEach((point, i) => {
+        const x = xForMonths(point.months);
+        const y = yForCash(point.cash);
+        if (i === 0) ctx.moveTo(x, y);
+        else ctx.lineTo(x, y);
+      });
+      ctx.stroke();
+
+      // Current point marker
+      const last = history[history.length - 1];
+      ctx.fillStyle = '#2ecc71';
+      ctx.beginPath();
+      ctx.arc(xForMonths(last.months), yForCash(last.cash), 4, 0, Math.PI * 2);
+      ctx.fill();
+    }
+  }
+
+  // --- Wiring ---
+
+  actionButtons.forEach(btn => {
+    btn.addEventListener('click', () => onActionClick(btn.dataset.action));
+  });
+
+  const KEY_TO_ACTION = { '1': 'long', '2': 'short', '3': 'lever', '4': 'hold' };
+
+  document.addEventListener('keydown', (e) => {
+    if (e.target.tagName === 'INPUT') return;
+
+    if (e.key === 'Enter' && gameOver) {
+      resetGame();
+      return;
+    }
+
+    const action = KEY_TO_ACTION[e.key];
+    if (action) onActionClick(action);
+  });
+
+  restartBtn.addEventListener('click', resetGame);
+  window.addEventListener('resize', resizeCanvas);
+
+  resetGame();
+  resizeCanvas();
+})();
+</script>
+</body>
+</html>
